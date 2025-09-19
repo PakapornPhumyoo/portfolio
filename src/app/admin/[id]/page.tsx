@@ -1,8 +1,4 @@
-'use client'; // บังคับให้เป็น Client Component
-
-import { useStore } from '../../store/useStore';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
+'use client'; 
 
 interface Props {
   params: {
