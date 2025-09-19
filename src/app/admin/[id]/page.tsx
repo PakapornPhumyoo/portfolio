@@ -5,5 +5,5 @@ interface Props {
 }
 
 export default function StudentDetailPage({ params }: Props) {
-  // Your code...
+
 }
