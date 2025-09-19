@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { StudentFormData, studentSchema } from '../lib/validation';
 import { useStore } from '../store/useStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const universities = [
   'จุฬาลงกรณ์มหาวิทยาลัย',
@@ -16,13 +16,25 @@ const universities = [
   // เพิ่มมหาวิทยาลัยอื่นๆ ตามต้องการ
 ];
 
-const faculties = [
-  'วิศวกรรมศาสตร์',
-  'วิทยาศาสตร์',
-  'แพทยศาสตร์',
-  'ศิลปกรรมศาสตร์',
-  'บริหารธุรกิจ',
-  // เพิ่มสาขาอื่นๆ ตามต้องการ
+const genders = [
+  { value: 'male', label: 'ชาย' },
+  { value: 'female', label: 'หญิง' },
+  { value: 'other', label: 'อื่นๆ' },
+];
+
+const months = [
+  { value: '01', label: 'มกราคม' },
+  { value: '02', label: 'กุมภาพันธ์' },
+  { value: '03', label: 'มีนาคม' },
+  { value: '04', label: 'เมษายน' },
+  { value: '05', label: 'พฤษภาคม' },
+  { value: '06', label: 'มิถุนายน' },
+  { value: '07', label: 'กรกฎาคม' },
+  { value: '08', label: 'สิงหาคม' },
+  { value: '09', label: 'กันยายน' },
+  { value: '10', label: 'ตุลาคม' },
+  { value: '11', label: 'พฤศจิกายน' },
+  { value: '12', label: 'ธันวาคม' },
 ];
 
 const StudentForm = () => {
@@ -35,6 +47,7 @@ const StudentForm = () => {
   const [currentAward, setCurrentAward] = useState('');
   const [portfolio, setPortfolio] = useState<string[]>([]);
   const [currentPortfolio, setCurrentPortfolio] = useState('');
+  const [age, setAge] = useState<number | ''>('');
 
   const {
     register,
@@ -42,9 +55,38 @@ const StudentForm = () => {
     formState: { errors },
     setValue,
     reset,
+    watch,
   } = useForm<StudentFormData>({
     resolver: zodResolver(studentSchema),
   });
+
+  const watchBirthDate = watch('birthDay');
+  const watchBirthMonth = watch('birthMonth');
+  const watchBirthYear = watch('birthYear');
+
+  // คำนวณอายุอัตโนมัติเมื่อวันเกิดเปลี่ยนแปลง
+  useEffect(() => {
+    if (watchBirthDate && watchBirthMonth && watchBirthYear) {
+      const birthDate = new Date(
+        parseInt(watchBirthYear),
+        parseInt(watchBirthMonth) - 1,
+        parseInt(watchBirthDate)
+      );
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+      
+      setAge(calculatedAge);
+      setValue('age', calculatedAge);
+    } else {
+      setAge('');
+      setValue('age', 0);
+    }
+  }, [watchBirthDate, watchBirthMonth, watchBirthYear, setValue]);
 
   const onSubmit = (data: StudentFormData) => {
     addStudent({
@@ -59,11 +101,12 @@ const StudentForm = () => {
     setActivities([]);
     setAwards([]);
     setPortfolio([]);
+    setAge('');
     alert('ส่งแบบฟอร์มสำเร็จแล้ว!');
   };
 
   const addItem = (type: 'talent' | 'activity' | 'award' | 'portfolio') => {
-    let currentValue, setCurrent, items, setItems, setFieldValue;
+    let currentValue, setCurrent, items, setItems;
     
     switch (type) {
       case 'talent':
@@ -71,7 +114,6 @@ const StudentForm = () => {
         setCurrent = setCurrentTalent;
         items = talents;
         setItems = setTalents;
-        setFieldValue = () => setValue('talents', [...talents, currentTalent]);
         break;
       case 'activity':
         currentValue = currentActivity;
@@ -128,6 +170,10 @@ const StudentForm = () => {
     setItems(items.filter(i => i !== item));
   };
 
+  // สร้างตัวเลือกปี (ตั้งแต่ พ.ศ. 2540 ถึงปัจจุบัน)
+  const currentYear = new Date().getFullYear() + 543; // แปลงเป็น พ.ศ.
+  const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-gray-800">แบบฟอร์มสมัคร Portfolio TCAS69</h2>
@@ -153,6 +199,95 @@ const StudentForm = () => {
         </div>
       </div>
 
+      {/* ข้อมูลวันเกิดและเพศ */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">วันเกิด</label>
+          <select 
+            {...register('birthDay')} 
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+          >
+            <option value="">วัน</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+              <option key={day} value={day.toString().padStart(2, '0')}>
+                {day}
+              </option>
+            ))}
+          </select>
+          {errors.birthDay && <p className="text-red-500 text-sm">{errors.birthDay.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">เดือนเกิด</label>
+          <select 
+            {...register('birthMonth')} 
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+          >
+            <option value="">เดือน</option>
+            {months.map(month => (
+              <option key={month.value} value={month.value}>
+                {month.label}
+              </option>
+            ))}
+          </select>
+          {errors.birthMonth && <p className="text-red-500 text-sm">{errors.birthMonth.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">ปีเกิด (พ.ศ.)</label>
+          <select 
+            {...register('birthYear')} 
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+          >
+            <option value="">ปี</option>
+            {years.map(year => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          {errors.birthYear && <p className="text-red-500 text-sm">{errors.birthYear.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">อายุ</label>
+          <input 
+            type="number"
+            value={age}
+            readOnly
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 p-2 border"
+          />
+          <input type="hidden" {...register('age', { valueAsNumber: true })} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">เพศ</label>
+          <select 
+            {...register('gender')} 
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+          >
+            <option value="">เลือกเพศ</option>
+            {genders.map(gender => (
+              <option key={gender.value} value={gender.value}>
+                {gender.label}
+              </option>
+            ))}
+          </select>
+          {errors.gender && <p className="text-red-500 text-sm">{errors.gender.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">หมายเลขโทรศัพท์</label>
+          <input 
+            {...register('phone')} 
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+          />
+          {errors.phone && <p className="text-red-500 text-sm">{errors.phone.message}</p>}
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700">ที่อยู่</label>
         <textarea 
@@ -161,15 +296,6 @@ const StudentForm = () => {
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
         />
         {errors.address && <p className="text-red-500 text-sm">{errors.address.message}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">หมายเลขโทรศัพท์</label>
-        <input 
-          {...register('phone')} 
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-        />
-        {errors.phone && <p className="text-red-500 text-sm">{errors.phone.message}</p>}
       </div>
 
       <div>
@@ -202,6 +328,7 @@ const StudentForm = () => {
             value={currentTalent}
             onChange={(e) => setCurrentTalent(e.target.value)}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            placeholder="กรอกความสามารถพิเศษ"
           />
           <button 
             type="button"
@@ -236,39 +363,46 @@ const StudentForm = () => {
           {...register('reason')} 
           rows={4}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+          placeholder="อธิบายเหตุผลที่ต้องการสมัครเข้าศึกษาต่อ"
         />
         {errors.reason && <p className="text-red-500 text-sm">{errors.reason.message}</p>}
       </div>
 
-      {/* สาขาและมหาวิทยาลัย */}
+      {/* สาขาและมหาวิทยาลัย - แยกเป็นช่องอิสระ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">สาขาที่เลือก</label>
-          <select 
+          <label className="block text-sm font-medium text-gray-700">คณะ</label>
+          <input 
             {...register('faculty')} 
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-          >
-            <option value="">เลือกสาขา</option>
-            {faculties.map((faculty, index) => (
-              <option key={index} value={faculty}>{faculty}</option>
-            ))}
-          </select>
+            placeholder="กรอกชื่อคณะ"
+          />
           {errors.faculty && <p className="text-red-500 text-sm">{errors.faculty.message}</p>}
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700">มหาวิทยาลัย</label>
-          <select 
-            {...register('university')} 
+          <label className="block text-sm font-medium text-gray-700">สาขา</label>
+          <input 
+            {...register('major')} 
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-          >
-            <option value="">เลือกมหาวิทยาลัย</option>
-            {universities.map((university, index) => (
-              <option key={index} value={university}>{university}</option>
-            ))}
-          </select>
-          {errors.university && <p className="text-red-500 text-sm">{errors.university.message}</p>}
+            placeholder="กรอกชื่อสาขา"
+          />
+          {errors.major && <p className="text-red-500 text-sm">{errors.major.message}</p>}
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">มหาวิทยาลัย</label>
+        <select 
+          {...register('university')} 
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+        >
+          <option value="">เลือกมหาวิทยาลัย</option>
+          {universities.map((university, index) => (
+            <option key={index} value={university}>{university}</option>
+          ))}
+        </select>
+        {errors.university && <p className="text-red-500 text-sm">{errors.university.message}</p>}
       </div>
 
       {/* กิจกรรม (optional) */}
@@ -279,6 +413,7 @@ const StudentForm = () => {
             value={currentActivity}
             onChange={(e) => setCurrentActivity(e.target.value)}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            placeholder="กรอกกิจกรรม"
           />
           <button 
             type="button"
@@ -313,6 +448,7 @@ const StudentForm = () => {
             value={currentAward}
             onChange={(e) => setCurrentAward(e.target.value)}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            placeholder="กรอกรางวัล"
           />
           <button 
             type="button"
@@ -347,6 +483,7 @@ const StudentForm = () => {
             value={currentPortfolio}
             onChange={(e) => setCurrentPortfolio(e.target.value)}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            placeholder="กรอกผลงาน"
           />
           <button 
             type="button"
