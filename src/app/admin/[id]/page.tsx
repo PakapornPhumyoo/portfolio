@@ -1,9 +1,7 @@
 'use client'; 
 
 interface Props {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default function StudentDetailPage({ params }: Props) {
