@@ -19,7 +19,6 @@ const universities = [
 const genders = [
   { value: 'male', label: 'ชาย' },
   { value: 'female', label: 'หญิง' },
-  { value: 'other', label: 'อื่นๆ' },
 ];
 
 const months = [
@@ -38,7 +37,7 @@ const months = [
 ];
 
 const StudentForm = () => {
-  const { addStudent } = useStore();
+  const { addStudent, students } = useStore();
   const [talents, setTalents] = useState<string[]>([]);
   const [currentTalent, setCurrentTalent] = useState('');
   const [activities, setActivities] = useState<string[]>([]);
@@ -47,7 +46,7 @@ const StudentForm = () => {
   const [currentAward, setCurrentAward] = useState('');
   const [portfolio, setPortfolio] = useState<string[]>([]);
   const [currentPortfolio, setCurrentPortfolio] = useState('');
-  const [age, setAge] = useState<number | ''>('');
+  const [suggestedAge, setSuggestedAge] = useState<number | ''>('');
 
   const {
     register,
@@ -64,29 +63,40 @@ const StudentForm = () => {
   const watchBirthMonth = watch('birthMonth');
   const watchBirthYear = watch('birthYear');
 
-  // คำนวณอายุอัตโนมัติเมื่อวันเกิดเปลี่ยนแปลง
+  // เพิ่มข้อมูลของฉันเข้าไปใน Store โดยอัตโนมัติเมื่อ component ถูกโหลด
   useEffect(() => {
-    if (watchBirthDate && watchBirthMonth && watchBirthYear) {
-      const birthDate = new Date(
-        parseInt(watchBirthYear),
-        parseInt(watchBirthMonth) - 1,
-        parseInt(watchBirthDate)
-      );
-      const today = new Date();
-      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        calculatedAge--;
-      }
-      
-      setAge(calculatedAge);
-      setValue('age', calculatedAge);
-    } else {
-      setAge('');
-      setValue('age', 0);
+    // ตรวจสอบว่ามีข้อมูลของฉันอยู่แล้วหรือไม่
+    const myDataExists = students.some(student => 
+      student.firstName === 'ภคพร' && student.lastName === 'พุ่มอยู่'
+    );
+    
+    if (!myDataExists) {
+      // เพิ่มข้อมูลของฉันเข้าไปใน Store
+      addStudent({
+        firstName: 'ภคพร',
+        lastName: 'พุ่มอยู่',
+        birthDay: '06',
+        birthMonth: '03',
+        birthYear: '2549',
+        age: 19,
+        gender: 'female',
+        phone: '0967582276',
+        address: '52/8 บ้านดงตะขบ ต.ท่าเสา อ.เมือง จ.อุตรดิตถ์ 53000',
+        school: 'วิทยาลัยอาชีวศึกษาอุตรดิตถ์',
+        gpa: 3.75,
+        faculty: 'วิทยาศาสตร์',
+        major: 'วิทยาการคอมพิวเตอร์',
+        university: 'มหาวิทยาลัยแม่โจ้',
+        reason: 'มีความสนใจในด้านเทคโนโลยีและต้องการพัฒนาทักษะทางวิศวกรรมคอมพิวเตอร์',
+        talents: ['Programming', 'English'],
+        activities: ['ค่ายพัฒนาภาษาอังกฤษ', 'กิจกรรมอาสา'],
+        awards: ['รางวัลนักเรียนดีเด่น'],
+        portfolio: ['โปรเจคจัดการฐานข้อมูล', 'เว็บไซต์ส่วนตัว'],
+        image: 'https://scontent.fcnx4-1.fna.fbcdn.net/v/t1.15752-9/550754204_1097274275513574_137653420225371563_n.jpg?stp=dst-jpg_p480x480_tt6&_nc_cat=101&ccb=1-7&_nc_sid=0024fc&_nc_eui2=AeGskzKLW9lyvMJ0xfDlM6fKgdrScLmM3aiB2tJwuYzdqMeFKY7kal6eA2jbJzeLze7_3fBmBg6TqzhnjiMmp9gl&_nc_ohc=_5zU3xuXrPYQ7kNvwEpbxMA&_nc_oc=AdmjXtKHAa9Kq8x5TzBfDSTD08e7p373GN_oQkNAbn0FXjHYiW4RqAuoYp1x_kbx4QQ&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.fcnx4-1.fna&oh=03_Q7cD3QHNZBns74JgK7olK-CQJYHMSxCn7gBI1WWJH5AkTK5uSw&oe=68F5BC9E',
+      });
     }
-  }, [watchBirthDate, watchBirthMonth, watchBirthYear, setValue]);
+  }, [addStudent, students]);
+
 
   const onSubmit = (data: StudentFormData) => {
     addStudent({
@@ -101,7 +111,7 @@ const StudentForm = () => {
     setActivities([]);
     setAwards([]);
     setPortfolio([]);
-    setAge('');
+    setSuggestedAge('');
     alert('ส่งแบบฟอร์มสำเร็จแล้ว!');
   };
 
@@ -253,11 +263,11 @@ const StudentForm = () => {
           <label className="block text-sm font-medium text-gray-700">อายุ</label>
           <input 
             type="number"
-            value={age}
-            readOnly
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 p-2 border"
+            {...register('age', { valueAsNumber: true })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            placeholder="กรอกอายุ"
           />
-          <input type="hidden" {...register('age', { valueAsNumber: true })} />
+          {errors.age && <p className="text-red-500 text-sm">{errors.age.message}</p>}
         </div>
       </div>
 
